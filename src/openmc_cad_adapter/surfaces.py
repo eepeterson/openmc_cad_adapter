@@ -149,13 +149,23 @@ class CADZPlane(CADSurface, openmc.ZPlane):
 class CADCylinder(CADSurface, openmc.Cylinder):
 
     def to_cubit_surface_inner(self, ent_type, node, extents, inner_world=None, hex=False):
-        print('XCADCylinder to cubit surface')
         cad_cmds = []
-        h = inner_world[2] if inner_world else extents[2]
-        cad_cmds.append(f"cylinder height {h} radius {self.r}")
-        ids = emit_get_last_id(cmds=cad_cmds)
+        h = inner_world[0] if inner_world else 2*np.max(extents)
+        cad_cmds.append( f"cylinder height {h} radius {self.r}")
+        ids = emit_get_last_id( ent_type , cad_cmds)
+        n = np.array([self.dx, self.dy, self.dz])
+        nhat = n / np.linalg.norm(n)
+        rhat = np.array([0.0, 0.0, 1.0])
+        angle = math.degrees(math.acos(np.dot(nhat, rhat)))
+
+        if not math.isclose(angle, 0.0, abs_tol=1e-6):
+            rot_axis = np.cross(rhat, nhat)
+            rot_axis /= np.linalg.norm(rot_axis)
+            axis = f"{rot_axis[0]} {rot_axis[1]} {rot_axis[2]}"
+            cmds.append(f"rotate body {{ {ids} }} about 0 0 0 direction {axis} Angle {angle}")
+
+        cad_cmds.append(f"body {{ { ids } }} move {self.x0} {self.y0} {self.z0}")
         if node.side != '-':
-            wid = 0
             if inner_world:
                 if hex:
                     cad_cmds.append(f"create prism height {inner_world[2]} sides 6 radius { ( inner_world[0] / 2 ) }")
@@ -165,15 +175,16 @@ class CADCylinder(CADSurface, openmc.Cylinder):
                     cad_cmds.append(f"brick x {inner_world[0]} y {inner_world[1]} z {inner_world[2]}")
                     wid = emit_get_last_id(ent_type, cad_cmds)
             else:
-                cad_cmds.append( f"brick x {w[0]} y {w[1]} z {w[2]}" )
-                wid = emit_get_last_id(ent_type, cad_cmds)
-            cad_cmds.append( f"subtract body {{ { ids } }} from body {{ { wid } }}" )
-            rotate( wid, self.dx, self.dy, self.dz, cad_cmds)
-            move( wid, self.x0, self.y0, self.z0, cad_cmds)
+                cad_cmds.append( f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
+                wid = emit_get_last_id( ent_type , cad_cmds)
+            cad_cmds.append(f"intersect body {{ { ids } }} {{ { wid } }}")
             return wid, cad_cmds
-        rotate( ids, self.dx, self.dy, self.dz, cad_cmds)
-        move( ids, self.x0, self.y0, self.z0, cad_cmds)
-        return ids, cad_cmds
+        else:
+            cad_cmds.append( f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
+            wid = emit_get_last_id( ent_type , cad_cmds)
+            cad_cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }}")
+
+        return wid, cad_cmds
 
     @classmethod
     def from_openmc_surface_inner(cls, cyl):
@@ -209,7 +220,7 @@ class CADXCylinder(CADSurface, openmc.XCylinder):
             wid = emit_get_last_id( ent_type , cad_cmds)
             cad_cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }}")
 
-        return ids, cad_cmds
+        return wid, cad_cmds
 
     @classmethod
     def from_openmc_surface_inner(cls, cyl):
@@ -220,10 +231,11 @@ class CADYCylinder(CADSurface, openmc.YCylinder):
 
     def to_cubit_surface_inner(self, ent_type, node, extents, inner_world=None, hex=False):
         cad_cmds = []
-        h = inner_world[1] if inner_world else extents[1]
+        h = inner_world[0] if inner_world else 2*np.max(extents)
         cad_cmds.append( f"cylinder height {h} radius {self.r}")
         ids = emit_get_last_id( ent_type , cad_cmds)
         cad_cmds.append(f"rotate body {{ {ids} }} about x angle 90")
+        cad_cmds.append(f"body {{ { ids } }} move {self.x0} 0.0 {self.z0}")
         if node.side != '-':
             wid = 0
             if inner_world:
@@ -238,11 +250,13 @@ class CADYCylinder(CADSurface, openmc.YCylinder):
             else:
                 cad_cmds.append( f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
                 wid = emit_get_last_id( ent_type , cad_cmds)
-            cad_cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }}")
-            move(wid, self.x0, 0, self.z0, cad_cmds)
+            cad_cmds.append(f"intersect body {{ { ids } }} {{ { wid } }}")
             return wid, cad_cmds
-        move(ids, self.x0, 0, self.z0, cad_cmds)
-        return ids, cad_cmds
+        else:
+            cad_cmds.append( f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
+            wid = emit_get_last_id( ent_type , cad_cmds)
+            cad_cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }}")
+        return wid, cad_cmds
 
     @classmethod
     def from_openmc_surface_inner(cls, cyl):
@@ -253,9 +267,10 @@ class CADZCylinder(CADSurface, openmc.ZCylinder):
 
     def to_cubit_surface_inner(self, ent_type, node, extents, inner_world=None, hex=False):
         cad_cmds = []
-        h = inner_world[2] if inner_world else extents[2]
+        h = inner_world[2] if inner_world else 2*np.max(extents)
         cad_cmds.append( f"cylinder height {h} radius {self.r}")
         ids = emit_get_last_id( ent_type , cad_cmds)
+        cad_cmds.append(f"body {{ { ids } }} move {self.x0} {self.y0} 0.0")
         if node.side != '-':
             wid = 0
             if inner_world:
@@ -269,11 +284,13 @@ class CADZCylinder(CADSurface, openmc.ZCylinder):
             else:
                 cad_cmds.append( f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
                 wid = emit_get_last_id( ent_type , cad_cmds)
-            cad_cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }}")
-            move(wid, self.x0, self.y0, 0, cad_cmds)
+            cad_cmds.append(f"intersect body {{ { ids } }} {{ { wid } }}")
             return wid, cad_cmds
-        move(ids, self.x0, self.y0, 0, cad_cmds)
-        return ids, cad_cmds
+        else:
+            cad_cmds.append( f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
+            wid = emit_get_last_id( ent_type , cad_cmds)
+            cad_cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }}")
+        return wid, cad_cmds
 
     @classmethod
     def from_openmc_surface_inner(cls, cyl):
