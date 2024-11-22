@@ -184,12 +184,12 @@ class CADXCylinder(CADSurface, openmc.XCylinder):
 
     def to_cubit_surface_inner(self, ent_type, node, extents, inner_world=None, hex=False):
         cad_cmds = []
-        h = inner_world[0] if inner_world else extents[0]
+        h = inner_world[0] if inner_world else 2*np.max(extents)
         cad_cmds.append( f"cylinder height {h} radius {self.r}")
         ids = emit_get_last_id( ent_type , cad_cmds)
         cad_cmds.append(f"rotate body {{ {ids} }} about y angle 90")
+        cad_cmds.append(f"body {{ { ids } }} move 0.0 {self.y0} {self.z0}")
         if node.side != '-':
-            wid = 0
             if inner_world:
                 if hex:
                     cad_cmds.append(f"create prism height {inner_world[2]} sides 6 radius { ( inner_world[0] / 2 ) }")
@@ -202,10 +202,13 @@ class CADXCylinder(CADSurface, openmc.XCylinder):
             else:
                 cad_cmds.append( f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
                 wid = emit_get_last_id( ent_type , cad_cmds)
-            cad_cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }}")
-            move(wid, 0, self.y0, self.z0, cad_cmds)
+            cad_cmds.append(f"intersect body {{ { ids } }} {{ { wid } }}")
             return wid, cad_cmds
-        move(ids, 0, self.y0, self.z0, cad_cmds)
+        else:
+            cad_cmds.append( f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
+            wid = emit_get_last_id( ent_type , cad_cmds)
+            cad_cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }}")
+
         return ids, cad_cmds
 
     @classmethod
