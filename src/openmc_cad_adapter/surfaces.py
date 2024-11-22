@@ -162,7 +162,7 @@ class CADCylinder(CADSurface, openmc.Cylinder):
             rot_axis = np.cross(rhat, nhat)
             rot_axis /= np.linalg.norm(rot_axis)
             axis = f"{rot_axis[0]} {rot_axis[1]} {rot_axis[2]}"
-            cmds.append(f"rotate body {{ {ids} }} about 0 0 0 direction {axis} Angle {angle}")
+            cad_cmds.append(f"rotate body {{ {ids} }} about 0 0 0 direction {axis} Angle {angle}")
 
         cad_cmds.append(f"body {{ { ids } }} move {self.x0} {self.y0} {self.z0}")
         if node.side != '-':
