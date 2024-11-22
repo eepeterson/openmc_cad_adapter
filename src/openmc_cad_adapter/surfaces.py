@@ -177,12 +177,12 @@ class CADCylinder(CADSurface, openmc.Cylinder):
             else:
                 cad_cmds.append( f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
                 wid = emit_get_last_id( ent_type , cad_cmds)
-            cad_cmds.append(f"intersect body {{ { ids } }} {{ { wid } }}")
+            cad_cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }}")
             return wid, cad_cmds
         else:
             cad_cmds.append( f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
             wid = emit_get_last_id( ent_type , cad_cmds)
-            cad_cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }}")
+            cad_cmds.append(f"intersect body {{ { ids } }} {{ { wid } }}")
 
         return wid, cad_cmds
 
@@ -213,12 +213,12 @@ class CADXCylinder(CADSurface, openmc.XCylinder):
             else:
                 cad_cmds.append( f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
                 wid = emit_get_last_id( ent_type , cad_cmds)
-            cad_cmds.append(f"intersect body {{ { ids } }} {{ { wid } }}")
+            cad_cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }}")
             return wid, cad_cmds
         else:
             cad_cmds.append( f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
             wid = emit_get_last_id( ent_type , cad_cmds)
-            cad_cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }}")
+            cad_cmds.append(f"intersect body {{ { ids } }} {{ { wid } }}")
 
         return wid, cad_cmds
 
@@ -250,12 +250,12 @@ class CADYCylinder(CADSurface, openmc.YCylinder):
             else:
                 cad_cmds.append( f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
                 wid = emit_get_last_id( ent_type , cad_cmds)
-            cad_cmds.append(f"intersect body {{ { ids } }} {{ { wid } }}")
+            cad_cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }}")
             return wid, cad_cmds
         else:
             cad_cmds.append( f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
             wid = emit_get_last_id( ent_type , cad_cmds)
-            cad_cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }}")
+            cad_cmds.append(f"intersect body {{ { ids } }} {{ { wid } }}")
         return wid, cad_cmds
 
     @classmethod
@@ -284,12 +284,12 @@ class CADZCylinder(CADSurface, openmc.ZCylinder):
             else:
                 cad_cmds.append( f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
                 wid = emit_get_last_id( ent_type , cad_cmds)
-            cad_cmds.append(f"intersect body {{ { ids } }} {{ { wid } }}")
+            cad_cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }}")
             return wid, cad_cmds
         else:
             cad_cmds.append( f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
             wid = emit_get_last_id( ent_type , cad_cmds)
-            cad_cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }}")
+            cad_cmds.append(f"intersect body {{ { ids } }} {{ { wid } }}")
         return wid, cad_cmds
 
     @classmethod
