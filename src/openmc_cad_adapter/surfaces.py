@@ -50,6 +50,48 @@ class CADPlane(CADSurface, openmc.Plane):
     def lreverse(node):
         return "" if node.side == '-' else "reverse"
 
+    def build_halfspaces(self, extents):
+        cmds = [f"# SURFACE ID {self.id}"]
+
+        n = np.array([self.coefficients[k] for k in ('a', 'b', 'c')])
+        distance = self.coefficients['d'] / np.linalg.norm(n)
+
+        # Create cutter block larger than the world and rotate/translate it so
+        # the +z plane of the block is coincident with this general plane
+        max_extent = np.max(extents)
+        cmds.append(f"brick x {2*max_extent} y {2*max_extent} z {2*max_extent}" )
+        ids = emit_get_last_id( "body", cmds)
+        cmds.append(f"body {{ { ids } }} move 0.0 0.0 {-max_extent}")
+
+        nhat = n / np.linalg.norm(n)
+        rhat = np.array([0.0, 0.0, 1.0])
+        angle = math.degrees(math.acos(np.dot(nhat, rhat)))
+
+        if not math.isclose(angle, 0.0, abs_tol=1e-6):
+            rot_axis = np.cross(rhat, nhat)
+            rot_axis /= np.linalg.norm(rot_axis)
+            axis = f"{rot_axis[0]} {rot_axis[1]} {rot_axis[2]}"
+            cmds.append(f"Rotate body {{ {ids} }} about 0 0 0 direction {axis} Angle {angle}")
+
+        tvec = distance*nhat
+        cmds.append(f"body {{ { ids } }} move {tvec[0]} {tvec[1]} {tvec[2]}")
+
+        cmds.append(f"brick x {extents[0]} y {extents[1]} z {extents[2]}" )
+        wid = emit_get_last_id( "body", cmds)
+        # if positive half space we subtract the cutter block from the world
+        cmds.append(f"subtract body {{ { ids } }} from body {{ { wid } }} keep")
+        ids_pos = emit_get_last_id( "body", cmds)
+        # if negative half space we intersect the cutter block with the world
+        cmds.append(f"intersect body {{ { ids } }} {{ { wid } }}")
+        #ids_neg = emit_get_last_id( "body", cmds)
+        cmds.append(f"# + Halfspace body ID: {ids_pos}")
+        cmds.append(f"# - Halfspace body ID: {wid}")
+
+        self.pos_hs = ids_pos
+        self.neg_hs = wid
+
+        return cmds
+
     def to_cubit_surface_inner(self, ent_type, node, extents, inner_world=None, hex=False):
         cmds = []
 
